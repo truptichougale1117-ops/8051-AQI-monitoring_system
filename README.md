@@ -1,185 +1,187 @@
-# Air Quality Monitoring System using 8051 and ADC0808
+# 8051-Based Air Quality Monitoring System Using ADC0808
 
-A student embedded-systems project. An AT89C51-compatible 8051 microcontroller reads two analog sensor inputs through an ADC0808, shows the readings on a 16×2 LCD, and turns on LEDs and a buzzer based on threshold values in the code.
+## Overview
 
-> **Important:** The numbers shown on the LCD are raw 8-bit ADC counts (0–255). They are not calibrated air-quality measurements and they are not AQI values.
+This embedded-systems project uses an 8051-family microcontroller and an ADC0808 analog-to-digital converter to read two analog sensor inputs. The firmware displays the readings on a 16×2 LCD and controls LEDs and a buzzer according to programmed thresholds.
+
+The project was initially developed during my second year and is now being documented on GitHub.
+
+> 
 
 ## Project Status
 
-**Implemented (in the code and circuit design)**
-- Reading two ADC0808 channels one after the other
-- Showing both readings on a 16×2 LCD in 4-bit mode
-- Controlling three LEDs (green, yellow, red) and a buzzer from the readings
-- Timer 0 delays using an 11.0592 MHz crystal
+- **Proteus simulation:** Verified during project work.
+- **Physical hardware:** Assembled during the original project, but its operation has not been re-verified recently.
+- **Sensor thresholds:** Experimental values selected during earlier development. The original numerical clean-air readings are no longer available.
+- **Calibration and validation:** The thresholds have not been validated against a suitable reference instrument.
+- **Next verification steps:** Confirm the final pin assignments, repeat sensor measurements, and test the physical circuit.
 
-**Tested**
-- [Fill in only what you have actually tested, and whether it was in Proteus or on hardware. See the Testing section.]
+## Features
 
-**Not done yet**
-- Sensor calibration
-- Checking the thresholds against a reference instrument
-- Filtering or averaging of readings
+- Reads two analog inputs through separate ADC0808 channels.
+- Displays both readings on a 16×2 LCD using 4-bit mode.
+- Organizes the firmware into functions for ADC acquisition, LCD operations, numerical display, and output control.
+- Controls LEDs and a buzzer using programmed threshold conditions.
+- Demonstrates 8051 peripheral interfacing, timer-based delays, and conditional logic.
 
-## Hardware
+The listed behavior should be considered implemented only to the extent confirmed by the current source code and simulation.
 
-- AT89C51-compatible 8051 microcontroller, 11.0592 MHz crystal
-- ADC0808 (8-bit, 8-channel, with a multiplexed analog input)
-- Two analog sensors: [sensor models]
-- 16×2 LCD (4-bit mode)
-- Red, yellow, and green LEDs
-- Buzzer
-- Resistors, wiring, and power supply: [values and ratings]
+## Hardware Components
 
-## Pin Connections
+- 8051-family microcontroller — confirm the exact part number used in the final circuit.
+- ADC0808 8-bit analog-to-digital converter.
+- Two analog sensor modules — MQ135 and MQ7.
+- 16×2 LCD.
+- Red, yellow, and green LEDs.
+- Buzzer.
+- 11.0592 MHz crystal.
+- Supporting components, wiring, reset circuit, and power supply.
 
-**ADC0808 to 8051**
+## Software and Tools
 
-| ADC0808 | 8051 |
-|---|---|
-| D0–D7 | P1.0–P1.7 |
-| Address A, B, C | P3.0, P3.1, P3.2 |
-| ALE | P3.3 |
-| START | P3.4 |
-| EOC | P3.5 |
-| OE | P3.6 |
-
-ADC0808 clock source: [fill in]. VREF connection: [fill in]. Supply connection: [fill in].
-
-**16×2 LCD to 8051**
-
-| LCD | 8051 |
-|---|---|
-| RS | P2.2 |
-| Enable | P2.3 |
-| D4–D7 | P2.4–P2.7 |
-| RW | Ground (write only) |
-
-Only D4–D7 are connected because the LCD runs in 4-bit mode.
-
-**LEDs and buzzer**
-
-| Output | 8051 |
-|---|---|
-| Red LED | P2.0 |
-| Yellow LED | P2.1 |
-| Green LED | [pin] |
-| Buzzer | P3.7 |
-
-The ADC0808 OE signal already uses P3.6, so the green LED could not use that pin and is connected to [pin] instead.
+- **Embedded C** — firmware.
+- **Keil µVision** — code development and compilation.
+- **Proteus** — circuit simulation.
+- **Git and GitHub** — source control and project documentation.
 
 ## How It Works
 
-1. The two sensors give analog voltages to two input channels of the ADC0808.
-2. For each reading, the 8051 sets the address lines A, B, C to pick the channel and pulses ALE to latch the address.
-3. The 8051 pulses START to begin the conversion, then waits for EOC to show that the conversion is finished.
-4. The 8051 raises OE so the ADC puts the 8-bit result on D0–D7, and reads it from Port 1.
-5. The program reads channel 1 (`ADC_Channel1()`), then channel 0 (`ADC_Channel0()`).
-6. Both values are shown on the LCD.
-7. `led_buzzer()` compares the values with the thresholds and switches the LEDs and buzzer.
+1. The sensor modules provide analog voltage signals to the ADC0808 input channels.
+2. The microcontroller selects an ADC channel using address lines A, B, and C.
+3. The firmware controls the ADC conversion sequence and waits for the End of Conversion (EOC) signal.
+4. The ADC's 8-bit digital output is enabled and read through Port 1.
+5. The firmware reads the two channels sequentially.
+6. The readings are displayed on the 16×2 LCD.
+7. The `led_buzzer()` function evaluates the readings against the programmed conditions and controls the indicators.
+
+The ADC0808 converts one selected channel at a time, so the two readings are acquired sequentially rather than simultaneously.
 
 ```text
-Analog sensors -> ADC0808 -> 8051 -> LCD + LEDs + buzzer
+Analog sensor inputs → ADC0808 → 8051 microcontroller → LCD
+                                                    └→ LEDs and buzzer
 ```
 
-### LCD display
+## Hardware Connections
 
-The LCD is used in 4-bit mode, so each byte is sent as two nibbles, high nibble first. `lcd_nibble()` does this. `lcd_cmd()` and `lcd_data()` use it to send commands and characters. `lcd_num()` splits a value from 0 to 255 into hundreds, tens, and ones so each digit can be shown as a character.
+The following mapping is based on the project notes. Confirm it against the actual circuit and source code before using it for physical wiring.
 
-The display looks like this (the numbers here are only an example of the format):
+### ADC0808 to 8051
 
-```text
-S1:125
-S2:087
-```
-
-[Fill in: which ADC channel is S1 and which is S2, and which sensor is connected to each.]
-
-### LED and buzzer logic
-
-The thresholds in the code are about 100, 150, and 200 ADC counts. I chose them for demonstration with this prototype. They are not official AQI breakpoints, and I have not checked them against a reference instrument.
-
-| Condition | Green | Yellow | Red | Buzzer |
-|---|---|---|---|---|
-| [fill in from `led_buzzer()`] | | | | |
-| [fill in from `led_buzzer()`] | | | | |
-| [fill in from `led_buzzer()`] | | | | |
-
-## Code Structure
-
-All the firmware is in `Code/main.c`.
-
-| Function | What it does |
+| ADC0808 signal | 8051 connection |
 |---|---|
-| `main()` | Sets up the LCD and ADC control pins, reads both channels, updates the LCD, calls `led_buzzer()` |
-| `ADC_Channel1()`, `ADC_Channel0()` | Select a channel, start a conversion, wait for EOC, return the result |
-| `lcd_init()` | Initializes the LCD in 4-bit mode |
-| `lcd_nibble()`, `lcd_cmd()`, `lcd_data()`, `lcd_string()` | Send nibbles, commands, characters, and strings to the LCD |
-| `lcd_num()` | Shows a 0–255 value as three digits |
-| `MSDelay()` | Millisecond delay using Timer 0 (depends on the 11.0592 MHz crystal) |
-| `delay()` | Simple software delay loop, less accurate than `MSDelay()` |
-| `led_buzzer()` | Sets the LEDs and buzzer from both sensor readings |
+| D0–D7 | P1.0–P1.7 |
+| Address A | P3.0 |
+| Address B | P3.1 |
+| Address C | P3.2 |
+| ALE | P3.3 |
+| START / SC | P3.4 |
+| EOC | P3.5 |
+| OE | P3.6 |
+
+* **Power supply:** The circuit is powered using a DC supply from a voltage-regulator circuit designed for the project. The ADC0808 supply and ground connections are connected to the appropriate power rails.
+* **ADC clock in simulation:** A clock source was used in Proteus to provide the ADC0808 clock signal.
+* **ADC clock in hardware:** The ADC clock is generated using a resistor-capacitor (RC) clock circuit.
+* **Reference voltage:** The ADC0808 reference-voltage connections should be documented according to the actual circuit wiring.
+ 
+
+### 16×2 LCD to 8051
+
+The LCD is configured for 4-bit communication.
+
+| LCD signal | 8051 connection |
+|---|---|
+| RS | P2.2 |
+| Enable (E) | P2.3 |
+| D4 | P2.4 |
+| D5 | P2.5 |
+| D6 | P2.6 |
+| D7 | P2.7 |
+| RW | Ground (write-only operation) |
+
+### LEDs and Buzzer
+
+| Output | Pin noted in the project |
+|---|---|
+| Red LED | P2.0 |
+| Yellow LED | P2.1 |
+| Green LED | P3.6 |
+| Buzzer | P3.7 |
+
+## Software Organization
+
+The firmware is written in Embedded C. Confirm the function names and descriptions against the source file included in this repository.
+
+| Function | Purpose |
+|---|---|
+| `main()` | Initializes the required pins and peripherals, reads both channels, updates the LCD, and calls the output-control function. |
+| `ADC_Channel0()` and `ADC_Channel1()` | Select and read the corresponding ADC channels. |
+| `lcd_init()` | Initializes the LCD in 4-bit mode. |
+| `lcd_nibble()` | Sends a four-bit value to the LCD. |
+| `lcd_cmd()` | Sends an LCD command. |
+| `lcd_data()` | Sends a character to the LCD. |
+| `lcd_string()` | Displays a string. |
+| `lcd_num()` | Displays a numerical ADC value as digits. |
+| `MSDelay()` | Provides a Timer 0-based delay; actual timing depends on the oscillator and timer configuration. |
+| `delay()` | Provides a software delay loop. |
+| `led_buzzer()` | Controls LEDs and the buzzer according to the programmed conditions. |
+
+## Challenges and Technical Considerations
+
+
+- **Conversion timing:** The firmware must use the EOC signal and ADC control signals in the correct sequence before reading the result.
+- **Sequential readings:** The ADC0808 reads one selected channel at a time, so the sensor values are collected one after the other.
+- **Output-control logic:** Threshold conditions must be ordered correctly and should define the intended behavior when the two sensor readings differ.
+- **Timing:** Timer delays depend on the crystal frequency and timer reload values.
+
+
+## Simulation Results
+
+## Physical Hardware
+
+//IMAGE
+
+## Sensor Baseline and Threshold Selection
+
+During the original development, clean-air sensor readings were observed and used to choose experimental thresholds for the LED and buzzer logic. The original numerical readings and threshold-selection records are no longer available, so specific historical values are not reported here.
+
+These thresholds are prototype settings, not official AQI breakpoints. Clean-air observations alone do not establish accurate gas concentrations. Further characterization and comparison with a suitable reference instrument would be needed before making calibrated measurement claims.
 
 ## Build and Simulate
 
-**Build in Keil µVision**
-1. Create a project and choose the AT89C51 (or a compatible device).
-2. Add `Code/main.c`.
-3. Set the crystal frequency to 11.0592 MHz.
-4. Turn on "Create HEX File" and build.
+### Build in Keil µVision
 
-**Simulate in Proteus**
-1. Open the project from the `Proteus/` folder.
-2. Load the HEX file into the microcontroller and set its clock to 11.0592 MHz.
-3. Give the ADC0808 a clock signal and set VREF: [clock source and VREF value].
-4. Connect the sensors, or use adjustable analog sources instead: [what you used].
-5. Run the simulation and watch the LCD, LEDs, and buzzer.
+1. Open or create the Keil project.
+2. Select the microcontroller that matches the actual circuit.
+3. Add the firmware source file(s).
+4. Confirm the oscillator and project settings.
+5. Compile the project and resolve build errors.
+6. Generate a HEX file if required by the Proteus model.
 
-## Testing
+### Simulate in Proteus
 
-Only mark a test as done if you have actually checked it.
+1. Open the Proteus project.
+2. Load the compiled HEX file into the microcontroller model.
+3. Confirm the microcontroller clock setting and the ADC0808 clock/reference connections against the schematic.
+4. Check the sensor inputs or use adjustable analog sources if that is how the simulation is configured.
+5. Run the simulation and observe ADC readings, LCD output, and LED/buzzer behavior.
 
-| Test | Where tested (Proteus / hardware) | Result |
-|---|---|---|
-| ADC channel selection and conversion | [ ] | [result or "not tested"] |
-| Reading both channels | [ ] | [result or "not tested"] |
-| LCD output | [ ] | [result or "not tested"] |
-| Each LED works | [ ] | [result or "not tested"] |
-| Buzzer works | [ ] | [result or "not tested"] |
-| LED and buzzer response to different inputs | [ ] | [result or "not tested"] |
-
-Images (add only the ones that exist in `Images/`):
-- Circuit diagram: `Images/circuit.png`
-- LCD output: `Images/output.png`
-- Block diagram: `Images/block_diagram.png`
-
-## Challenges and Lessons Learned
-
-- **Pin conflict:** P3.6 was already used for the ADC0808 OE signal, so I had to move the green LED to another pin. This made me plan the pin use of every port before wiring.
-- [Add other real problems you faced, such as LCD not initializing, wrong readings, or timing issues, and how you fixed them. Delete this line if there are none.]
 
 ## Limitations
 
-- The two channels are read one after the other, not at the same time.
-- The readings are raw ADC counts, not calibrated concentrations or AQI.
-- Accuracy depends on the sensors and the environment.
-- The thresholds are development values and have not been validated.
+- The LCD displays raw ADC counts rather than calibrated concentrations or official AQI values.
+- The original clean-air readings and threshold-selection records are unavailable.
+- The physical hardware has not been re-verified recently.
+- The exact microcontroller and sensor models, as well as ADC clock and reference connections, must be confirmed from the final circuit.
+- The thresholds have not been validated against a reference instrument.
+- The green LED pin assignment must be resolved if it conflicts with ADC0808 OE on P3.6.
 
-## Possible Next Steps
+## Future Improvements
 
-These are not implemented yet.
-- Calibrate the sensors using reference measurements
-- Average several readings to reduce noise
-- Replace the simple thresholds with a properly validated classification
+- Re-test the physical circuit and document the results.
+- Confirm the exact sensor and microcontroller models and finalize the pin map.
+- Collect and document new sensor readings under repeatable conditions.
+- Validate sensor behavior against a suitable reference instrument.
+- Evaluate averaging or filtering to reduce fluctuations, if needed.
+- Review and test the alert logic with different combinations of sensor readings.
 
-## Repository Structure
 
-```text
-Code/main.c          Firmware
-Proteus/             Simulation files
-Images/              Circuit diagram, LCD output, block diagram
-README.md
-```
-
-## License
-
-Not chosen yet. [Add the license name here after you pick one and add the LICENSE file.]
